@@ -20,15 +20,15 @@ detect_pkg_manager() {
     fi
 }
 
-# === Check if Package is Installed ===
+# === Check if command exists ===
 is_installed() {
     if command -v "$1" >/dev/null 2>&1; then
-        return 0  # installed
+        return 0
     fi
-    return 1  # not installed
+    return 1
 }
 
-# === Install Package ===
+# === Install a normal package ===
 install_package() {
     case "$PKG" in
         apt)
@@ -53,7 +53,39 @@ install_package() {
     esac
 }
 
-# === Main Script ===
+# === Install OpenJDK 21 (JRE + JDK) ===
+install_java() {
+    case "$PKG" in
+        apt)
+            sudo apt update
+            # Try openjdk-21 packages, fallback to headless if needed
+            sudo apt install -y openjdk-21-jre openjdk-21-jdk || \
+            sudo apt install -y openjdk-21-jdk-headless openjdk-21-jre-headless
+            ;;
+        dnf)
+            sudo dnf install -y java-21-openjdk java-21-openjdk-devel
+            ;;
+        yum)
+            sudo yum install -y java-21-openjdk java-21-openjdk-devel
+            ;;
+        pacman)
+            # Arch usually has latest openjdk as jdk-openjdk
+            sudo pacman -Sy --noconfirm jre-openjdk jdk-openjdk
+            ;;
+        zypper)
+            sudo zypper install -y java-21-openjdk java-21-openjdk-devel
+            ;;
+        apk)
+            sudo apk add openjdk21 openjdk21-jre
+            ;;
+        *)
+            echo "❌ Unsupported package manager for Java 21 installation."
+            exit 1
+            ;;
+    esac
+}
+
+# === Main script ===
 detect_pkg_manager
 echo "📦 Using package manager: $PKG"
 
@@ -61,16 +93,34 @@ for pkg in "$@"; do
     echo ""
     echo "➡ Checking: $pkg"
 
-    if is_installed "$pkg"; then
-        echo "✔ $pkg is already installed."
-    else
-        echo "⬇ Installing $pkg..."
-        install_package "$pkg"
-
-        if is_installed "$pkg"; then
-            echo "✔ $pkg installed successfully."
+    # Special handling for Java install
+    if [[ "$pkg" == "jdk" ]] || [[ "$pkg" == "java" ]] || [[ "$pkg" == "jre" ]]; then
+        # Check if java and javac exist
+        if command -v java >/dev/null 2>&1 && command -v javac >/dev/null 2>&1; then
+            echo "✔ Java JRE and JDK are already installed."
         else
-            echo "❌ Failed to install $pkg."
+            echo "⬇ Installing OpenJDK 21 JRE and JDK..."
+            install_java
+
+            if command -v java >/dev/null 2>&1 && command -v javac >/dev/null 2>&1; then
+                echo "✔ Java installed successfully."
+                java -version
+            else
+                echo "❌ Failed to install Java."
+            fi
+        fi
+    else
+        if is_installed "$pkg"; then
+            echo "✔ $pkg is already installed."
+        else
+            echo "⬇ Installing $pkg..."
+            install_package "$pkg"
+
+            if is_installed "$pkg"; then
+                echo "✔ $pkg installed successfully."
+            else
+                echo "❌ Failed to install $pkg."
+            fi
         fi
     fi
 done
