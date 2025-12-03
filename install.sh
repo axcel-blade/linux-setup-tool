@@ -1,5 +1,14 @@
 #!/bin/bash
 
+print_title() {
+    echo ""
+    echo "==========================================="
+    echo "   Linux Auto Installer Script"
+    echo "   Auto detect distro & install software"
+    echo "==========================================="
+    echo ""
+}
+
 detect_pkg_manager() {
     if command -v apt >/dev/null 2>&1; then
         PKG="apt"
@@ -82,14 +91,12 @@ install_java() {
 install_vscode() {
     case "$PKG" in
         apt)
-            # Check if code command exists
             if is_installed code; then
                 echo "✔ VSCode is already installed."
                 return
             fi
             echo "⬇ Installing VSCode for Debian/Ubuntu..."
 
-            # Import Microsoft GPG key and add repo
             wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor >microsoft.gpg
             sudo install -o root -g root -m 644 microsoft.gpg /usr/share/keyrings/
             rm microsoft.gpg
@@ -147,13 +154,14 @@ install_vscode() {
             ;;
     esac
 
-    # Final check
     if is_installed code; then
         echo "✔ VSCode installed successfully."
     else
         echo "❌ Failed to install VSCode."
     fi
 }
+
+print_title
 
 detect_pkg_manager
 echo "📦 Using package manager: $PKG"
