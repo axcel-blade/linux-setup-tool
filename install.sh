@@ -161,10 +161,64 @@ install_vscode() {
     fi
 }
 
+install_sdkman() {
+    if [ -d "$HOME/.sdkman" ]; then
+        echo "✔ SDKMAN is already installed."
+    else
+        echo "⬇ Installing SDKMAN..."
+        curl -s "https://get.sdkman.io" | bash
+        # Load SDKMAN for current shell
+        source "$HOME/.sdkman/bin/sdkman-init.sh"
+        if [ $? -ne 0 ]; then
+            echo "❌ Failed to initialize SDKMAN. Please restart your terminal and rerun the script."
+            exit 1
+        fi
+        echo "✔ SDKMAN installed."
+    fi
+}
+
+install_gradle() {
+    if is_installed gradle; then
+        echo "✔ Gradle is already installed."
+    else
+        echo "⬇ Installing Gradle via SDKMAN..."
+        install_sdkman
+        sdk install gradle
+        if is_installed gradle; then
+            echo "✔ Gradle installed successfully."
+            gradle --version
+        else
+            echo "❌ Failed to install Gradle."
+        fi
+    fi
+}
+
+install_springboot() {
+    if is_installed spring; then
+        echo "✔ Spring Boot CLI is already installed."
+    else
+        echo "⬇ Installing Spring Boot CLI via SDKMAN..."
+        install_sdkman
+        sdk install springboot
+        if is_installed spring; then
+            echo "✔ Spring Boot CLI installed successfully."
+            spring --version
+        else
+            echo "❌ Failed to install Spring Boot CLI."
+        fi
+    fi
+}
+
 print_title
 
 detect_pkg_manager
 echo "📦 Using package manager: $PKG"
+
+# Load sdkman if available to use in current shell session (important!)
+if [ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]; then
+    # shellcheck source=/dev/null
+    source "$HOME/.sdkman/bin/sdkman-init.sh"
+fi
 
 for pkg in "$@"; do
     echo ""
@@ -185,6 +239,10 @@ for pkg in "$@"; do
         fi
     elif [[ "$pkg" == "vscode" ]]; then
         install_vscode
+    elif [[ "$pkg" == "gradle" ]]; then
+        install_gradle
+    elif [[ "$pkg" == "springboot" ]]; then
+        install_springboot
     else
         if is_installed "$pkg"; then
             echo "✔ $pkg is already installed."
